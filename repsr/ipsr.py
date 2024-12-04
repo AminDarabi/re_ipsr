@@ -44,7 +44,7 @@ def iterative_poisson_reconstruction(
     points: o3d.geometry.PointCloud,
     max_iter: int = 30,
     depth: int = 12,
-    k_neighbours: int = 10,
+    k_neighbors: int = 10,
     threshold: float = 1e-5,
     init_method: str = "random",
 ) -> tuple[list[o3d.geometry.TriangleMesh], list[np.ndarray]]:
@@ -59,8 +59,8 @@ def iterative_poisson_reconstruction(
         Maximum number of iterations, by default 30
     depth : int, optional
         Depth for trees, by default 12
-    k_neighbours : int, optional
-        Number of neighbours to consider, by default 10
+    k_neighbors : int, optional
+        Number of neighbors to consider, by default 10
     threshold : float, optional
         Threshold for convergence, by default 1e-5
     init_method : str, optional
@@ -88,27 +88,24 @@ def iterative_poisson_reconstruction(
         meshes.append(mesh)
 
         mesh.compute_triangle_normals(False)
-        neighbours = kd_tree.query(
-            calculate_triangle_centroids(mesh), k_neighbours
+        neighbors = kd_tree.query(
+            calculate_triangle_centroids(mesh), k_neighbors
         )[1]
 
         new_normals = np.zeros((len(points.points), 3))
-        for neighbour, normal in zip(
-            neighbours, np.asarray(mesh.triangle_normals)
+        for neighbor, normal in zip(
+            neighbors, np.asarray(mesh.triangle_normals)
         ):
-            new_normals[neighbour] += normal
+            new_normals[neighbor] -= normal
 
         new_normal_norms = np.linalg.norm(new_normals, axis=1)
-        if np.isclose(new_normal_norms, 0).any():
-            warnings.warn(
-                "Some points were not in the neighbourhood of any triangle"
-            )
-            new_normals[np.isclose(new_normal_norms, 0)] = np.asarray(
-                points.normals
-            )[np.isclose(new_normal_norms, 0)]
-            new_normal_norms = np.linalg.norm(new_normals, axis=1)
+        new_normals[np.isclose(new_normal_norms, 0)] = np.asarray(
+            points.normals
+        )[np.isclose(new_normal_norms, 0)]
 
-        new_normals = new_normals / new_normal_norms[:, None]
+        new_normals = new_normals / np.linalg.norm(
+            new_normals, axis=1
+        )[:, None]
 
         if np.allclose(normals[-1], new_normals, atol=threshold):
             break

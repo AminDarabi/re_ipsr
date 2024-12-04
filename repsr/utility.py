@@ -34,11 +34,16 @@ def initial_normal(
     """
 
     if method == "random":
-        normals = np.random.rand(len(points.points), 3)
-        return normals / np.linalg.norm(normals, axis=1)[:, None]
+        theta = np.random.rand(len(points)) * 2 * np.pi
+        phi = np.random.rand(len(points)) * np.pi
+        return np.array([
+            np.sin(phi) * np.cos(theta),
+            np.sin(phi) * np.sin(theta),
+            np.cos(phi)
+        ]).T
     if method == "estimate":
         points.estimate_normals()
-        return np.asarray(points.normals)
+        return -np.asarray(points.normals)
 
     points = np.asarray(points.points)
     star_points = np.random.rand(np.sqrt(len(points)).astype(int), 3)
