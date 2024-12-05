@@ -2,9 +2,29 @@
 # the course "Geometric Modeling and shape analysis" (IFT6113) at the
 # Université de Montréal (UdeM) in Fall 2024.
 """
-"""
+Iterative Poisson surface reconstruction.
 
-import warnings
+This module provides a function to perform iterative Poisson surface \
+reconstruction on a given point cloud. The function iteratively estimates \
+the normals of the points and reconstructs the surface using the Poisson \
+reconstruction algorithm. The function returns a list of meshes and normals \
+for each iteration.
+
+Example
+-------
+The following example demonstrates how to use the function to perform \
+iterative Poisson surface reconstruction on a given point cloud.
+
+>>> import open3d as o3d
+>>> import repsr
+>>> # Load the point cloud
+>>> points = o3d.io.read_point_cloud("bunny.ply")
+>>> # Perform iterative Poisson surface reconstruction
+>>> meshes, normals = repsr.iterative_poisson_reconstruction(points)
+>>> # Plot the meshes
+>>> repsr.plot_meshes(meshes, normals, "Poisson Surface Reconstruction", \
+    [f"Iteration {i}" for i in range(len(meshes))])
+"""
 
 import numpy as np
 import scipy as sp
@@ -12,32 +32,7 @@ import open3d as o3d
 import tqdm
 
 from repsr.utility import initial_normal, calculate_triangle_centroids
-
-
-def screened_poisson_reconstruction(
-    points: o3d.geometry.PointCloud,
-    depth: int = 12,
-    alpha: float = 10
-) -> o3d.geometry.TriangleMesh:
-    """
-    Screened Poisson surface reconstruction.
-
-    Parameters
-    ----------
-    points : o3d.geometry.PointCloud
-        Input point cloud
-    depth : int, optional
-        Depth for trees, by default 12
-    alpha : float, optional
-        Alpha value for the Poisson reconstruction, by default 10
-
-    Returns
-    -------
-    o3d.geometry.TriangleMesh
-        Reconstructed mesh
-    """
-
-    pass
+from repsr.utility import calculate_surfaces_normals
 
 
 def iterative_poisson_reconstruction(
@@ -45,8 +40,10 @@ def iterative_poisson_reconstruction(
     max_iter: int = 30,
     depth: int = 12,
     k_neighbors: int = 10,
-    threshold: float = 1e-5,
-    init_method: str = "random",
+    threshold: float = 1e-4,
+    init_method: str = 'random',
+    weighted: bool = False,
+    anealing: bool = False
 ) -> tuple[list[o3d.geometry.TriangleMesh], list[np.ndarray]]:
     """
     Iterative Poisson surface reconstruction.
@@ -83,20 +80,31 @@ def iterative_poisson_reconstruction(
     for _ in tqdm.tqdm(range(max_iter)):
 
         mesh, _ = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
-            points, depth=depth
+            points, depth=10, scale=1.01
         )
+        # mesh = poisson_reconstruction(points)
         meshes.append(mesh)
 
-        mesh.compute_triangle_normals(False)
-        neighbors = kd_tree.query(
+        if anealing:
+            k_neighbors = max(1, k_neighbors - 1)
+
+        surfaces_normals = calculate_surfaces_normals(mesh)
+        distances, neighbors = kd_tree.query(
             calculate_triangle_centroids(mesh), k_neighbors
-        )[1]
+        )
+
+        if k_neighbors == 1:
+            neighbors = neighbors[:, None]
+            distances = distances[:, None]
 
         new_normals = np.zeros((len(points.points), 3))
-        for neighbor, normal in zip(
-            neighbors, np.asarray(mesh.triangle_normals)
+        for distance, neighbor, normal in zip(
+            distances, neighbors, surfaces_normals
         ):
-            new_normals[neighbor] -= normal
+            if weighted:
+                new_normals[neighbor] += normal / (distance + 1e-6)[:, None]
+            else:
+                new_normals[neighbor] += normal
 
         new_normal_norms = np.linalg.norm(new_normals, axis=1)
         new_normals[np.isclose(new_normal_norms, 0)] = np.asarray(
@@ -107,8 +115,10 @@ def iterative_poisson_reconstruction(
             new_normals, axis=1
         )[:, None]
 
-        if np.allclose(normals[-1], new_normals, atol=threshold):
+        diff = np.linalg.norm(new_normals - normals[-1], axis=1).mean()
+        if diff < threshold:
             break
+
         points.normals = o3d.utility.Vector3dVector(new_normals)
         normals.append(new_normals)
 

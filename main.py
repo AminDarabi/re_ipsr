@@ -1,6 +1,11 @@
 # This python script is developed by Amin Darabi as part of the project of
 # the course "Geometric Modeling and shape analysis" (IFT6113) at the
 # Université de Montréal (UdeM) in Fall 2024.
+"""
+an script to perform iterative Poisson surface reconstruction on a given \
+point cloud and plot/save the results.
+"""
+
 import argparse
 import sys
 import os
@@ -107,27 +112,30 @@ def main(args):
     meshes, normals = repsr.iterative_poisson_reconstruction(
         points, max_iter=args.max_iter, depth=args.depth,
         k_neighbors=args.k_neighbors, threshold=args.threshold,
-        init_method=args.init
+        init_method=args.init, weighted=args.weighted, anealing=args.anealing
     )
 
     os.makedirs(args.output, exist_ok=True)
+    o3d.io.write_triangle_mesh(
+        f"{args.output}/mesh.ply", meshes[-1], write_ascii=True,
+        write_vertex_normals=False, write_vertex_colors=False,
+        write_triangle_uvs=False
+    )
+    points.normals = o3d.utility.Vector3dVector(normals[-1])
+    o3d.io.write_point_cloud(
+        f"{args.output}/normals.ply", points, write_ascii=True
+    )
     if args.save_iters:
         for i, mesh in enumerate(meshes):
             o3d.io.write_triangle_mesh(
-                f"{args.output}/mesh_{i}.ply", mesh
+                f"{args.output}/mesh_{i}.ply", mesh, write_ascii=True,
+                write_vertex_normals=False, write_vertex_colors=False,
+                write_triangle_uvs=False
             )
             points.normals = o3d.utility.Vector3dVector(normals[i])
             o3d.io.write_point_cloud(
-                f"{args.output}/normals_{i}.ply", points
+                f"{args.output}/normals_{i}.ply", points, write_ascii=True
             )
-    else:
-        o3d.io.write_triangle_mesh(
-            f"{args.output}/mesh.ply", meshes[-1]
-        )
-        points.normals = o3d.utility.Vector3dVector(normals[-1])
-        o3d.io.write_point_cloud(
-            f"{args.output}/normals.ply", points
-        )
 
     if args.plot > 0:
 
@@ -181,7 +189,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--depth',
-        type=int, default=12,
+        type=int, default=10,
         help="Depth for trees"
     )
     parser.add_argument(
@@ -190,13 +198,13 @@ if __name__ == '__main__':
         help="Number of neighbors to consider"
     )
     parser.add_argument(
-        '--threshold', type=float, default=1e-5,
+        '--threshold', type=float, default=1e-4,
         help="Threshold for convergence"
     )
     parser.add_argument(
         '--plot', '-p',
         type=int, default=0,
-        help="Plot the result"
+        help="Number of iterations to plot"
     )
     parser.add_argument(
         '--alpha', type=float, default=10,
@@ -205,7 +213,17 @@ if __name__ == '__main__':
     parser.add_argument(
         '--save-iters', '-s',
         action='store_true',
-        help="Save intermediate iterations"
+        help="Save intermediate iterations meshes and normals"
+    )
+    parser.add_argument(
+        '--weighted', '-w',
+        action='store_true',
+        help="Use weighted normal updating in the reconstruction"
+    )
+    parser.add_argument(
+        '--anealing', '-a',
+        action='store_true',
+        help="Use anealing for the number of neighbors (K)"
     )
 
     main(parser.parse_args())
