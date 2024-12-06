@@ -207,10 +207,6 @@ if __name__ == '__main__':
         help="Number of iterations to plot"
     )
     parser.add_argument(
-        '--alpha', type=float, default=10,
-        help="Alpha value for the Screened Poisson reconstruction"
-    )
-    parser.add_argument(
         '--save-iters', '-s',
         action='store_true',
         help="Save intermediate iterations meshes and normals"

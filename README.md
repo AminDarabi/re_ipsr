@@ -22,7 +22,7 @@ throughout.
 - Support for saving intermediate results
 
 ## Requirements
-- Python 3.10 or later
+- Python 3.10 or later (3.11 tested)
 - NumPy
 - SciPy
 - Open3D
