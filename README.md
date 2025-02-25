@@ -1,14 +1,14 @@
+![Alt text](https://github.com/AminDarabi/re_ipsr/blob/main/Sample.png)
+
 # Iterative Poisson Surface Reconstruction
 
-This program is re implementation of iterative Poisson surface reconstruction on unoriented point clouds.
-It estimates point normals iteratively and reconstructs the surface using the Poisson reconstruction algorithm.
-The program can visualize the reconstruction process and save intermediate results.
+This program is a python re-implementation of iterative Poisson Surface Reconstruction(iPSR) on unoriented point clouds. It iteratively estimates point normals and reconstructs the surface using the Poisson reconstruction algorithm. The program can visualize the reconstruction process and save intermediate results.
 
 Two extensions also implemented in this program:
 - Weighted normal updating which updates the normals at each iteration as
-$ n_i = \sum_{j \in m} \frac{a_jn_j}{dist(p_i, f_j)} $ for associated
-faces f_j and normals n_j, and distance dist(p_i, f_j) from point p_i to face
-f_j
+$$n_i = \sum_{j \in m} \frac{a_jn_j}{dist(p_i, f_j)}$$ for associated
+faces $$f_j$$ and normals $$n_j$$, and distance dist($$p_i$$, $$f_j$$) from point $$p_i$$ to face
+$$f_j$$
 
 - Annealing for neighbor count (K) which reduces the number of neighbors
 throughout.
@@ -37,8 +37,6 @@ or,
 ```bash
 pip install -r requirements.txt
 ```
-
-note: No need to vedo for library only.
 
 ## Usage
 Run the program using:
