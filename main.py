@@ -112,7 +112,8 @@ def main(args):
     meshes, normals = repsr.iterative_poisson_reconstruction(
         points, max_iter=args.max_iter, depth=args.depth,
         k_neighbors=args.k_neighbors, threshold=args.threshold,
-        init_method=args.init, weighted=args.weighted, anealing=args.anealing
+        init_method=args.init, weighted=args.weighted, anealing=args.anealing,
+        point_weight=args.point_weight, solver=args.solver
     )
 
     os.makedirs(args.output, exist_ok=True)
@@ -190,7 +191,17 @@ if __name__ == '__main__':
     parser.add_argument(
         '--depth',
         type=int, default=10,
-        help="Depth for trees"
+        help="Depth of the Poisson octree"
+    )
+    parser.add_argument(
+        '--point-weight', '-pw',
+        type=float, default=10.0,
+        help="Screening weight of the Poisson reconstruction"
+    )
+    parser.add_argument(
+        '--solver',
+        type=str, default="open3d", choices=["open3d", "python"],
+        help="Poisson solver: official C++ (open3d) or pure NumPy (python)"
     )
     parser.add_argument(
         '--k-neighbors', '-k',
