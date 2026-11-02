@@ -6,3 +6,6 @@
 **/__pycache__/**
 **/.vscode/**
 **/pypoisson/**
+**/build/**
+**/dist/**
+**/*.egg-info/**

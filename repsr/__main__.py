@@ -2,8 +2,10 @@
 # the course "Geometric Modeling and shape analysis" (IFT6113) at the
 # Université de Montréal (UdeM) in Fall 2024.
 """
-an script to perform iterative Poisson surface reconstruction on a given \
-point cloud and plot/save the results.
+Command line interface: perform iterative Poisson surface reconstruction on a \
+given point cloud and plot/save the results.
+
+Usage: ``repsr input.ply [options]`` or ``python -m repsr input.ply [options]``
 """
 
 import argparse
@@ -163,9 +165,14 @@ def main(args):
     sys.exit(0)
 
 
-if __name__ == '__main__':
+def cli(argv: list[str] | None = None) -> None:
+    """
+    Entry point of the ``repsr`` command.
+    """
     parser = argparse.ArgumentParser(
-        description="A simple python script for Surface Reconstruction"
+        prog="repsr",
+        description="Iterative Poisson surface reconstruction of unoriented "
+        "point clouds"
     )
     parser.add_argument(
         'input',
@@ -233,4 +240,8 @@ if __name__ == '__main__':
         help="Use anealing for the number of neighbors (K)"
     )
 
-    main(parser.parse_args())
+    main(parser.parse_args(argv))
+
+
+if __name__ == '__main__':
+    cli()

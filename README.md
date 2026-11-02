@@ -22,26 +22,28 @@ throughout.
 - Support for saving intermediate results
 
 ## Requirements
-- Python 3.12 or later (3.13 tested)
+- Python 3.10 or later (3.13 tested)
 - NumPy
 - SciPy
 - Open3D 0.20 or later (exposes the Poisson screening weight)
 - Vedo
 - tqdm
 
-Assuming you have Python installed, you can install the required packages using pip:
+## Installation
+From the root of the repository, install the package and its dependencies with pip:
 ```bash
-pip install numpy scipy open3d vedo tqdm
+pip install .
 ```
-or,
-```bash
-pip install -r requirements.txt
-```
+(use `pip install -e .` for an editable install while developing).
 
 ## Usage
-Run the program using:
+Installing the package provides the `repsr` command:
 ```bash
-python main.py input_pointcloud.ply [options]
+repsr input_pointcloud.ply [options]
+```
+or, equivalently,
+```bash
+python -m repsr input_pointcloud.ply [options]
 ```
 
 ### Options
@@ -61,7 +63,7 @@ python main.py input_pointcloud.ply [options]
 ### Example
 To reconstruct a point cloud with visualization and intermediate results:
 ```bash
-python main.py bunny.ply -i 20 -k 15 --init heuristic -p 5 -o results/ -s -w
+repsr bunny.ply -i 20 -k 15 --init heuristic -p 5 -o results/ -s -w
 ```
 
 ### Pure Python Poisson reconstruction

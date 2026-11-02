@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "repsr"
+dynamic = ["version"]
+description = "Iterative Poisson Surface Reconstruction (iPSR) for unoriented point clouds"
+readme = "README.md"
+authors = [{ name = "Amin Darabi" }]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.12",
+    "open3d>=0.20",
+    "vedo>=2024.5",
+    "tqdm>=4.66",
+]
+
+[project.urls]
+Homepage = "https://github.com/AminDarabi/re_ipsr"
+
+[project.scripts]
+repsr = "repsr.__main__:cli"
+
+[tool.setuptools]
+packages = ["repsr"]
+
+[tool.setuptools.dynamic]
+version = { attr = "repsr.__version__" }
