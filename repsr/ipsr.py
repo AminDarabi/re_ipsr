@@ -33,17 +33,20 @@ import tqdm
 
 from repsr.utility import initial_normal, calculate_triangle_centroids
 from repsr.utility import calculate_surfaces_normals
+from repsr.psr import poisson_reconstruction
 
 
 def iterative_poisson_reconstruction(
     points: o3d.geometry.PointCloud,
     max_iter: int = 30,
-    depth: int = 12,
+    depth: int = 10,
     k_neighbors: int = 10,
     threshold: float = 1e-4,
     init_method: str = 'random',
     weighted: bool = False,
-    anealing: bool = False
+    anealing: bool = False,
+    point_weight: float = 10.0,
+    solver: str = 'open3d'
 ) -> tuple[list[o3d.geometry.TriangleMesh], list[np.ndarray]]:
     """
     Iterative Poisson surface reconstruction.
@@ -55,7 +58,7 @@ def iterative_poisson_reconstruction(
     max_iter : int, optional
         Maximum number of iterations, by default 30
     depth : int, optional
-        Depth for trees, by default 12
+        Depth of the Poisson octree, by default 10
     k_neighbors : int, optional
         Number of neighbors to consider, by default 10
     threshold : float, optional
@@ -63,6 +66,12 @@ def iterative_poisson_reconstruction(
     init_method : str, optional
         Method to estimate initial normals, by default "random"
         [random, estimate, heuristic]
+    point_weight : float, optional
+        Screening weight of the Poisson reconstruction, by default 10
+        (the value used by the original iPSR)
+    solver : str, optional
+        Poisson solver, by default "open3d" (official C++ PoissonRecon)
+        [open3d, python (repsr.psr, pure NumPy / SciPy)]
 
     Returns
     -------
@@ -73,16 +82,26 @@ def iterative_poisson_reconstruction(
     points.normals = o3d.utility.Vector3dVector(
         initial_normal(points, method=init_method)
     )
-    kd_tree = sp.spatial.KDTree(np.asarray(points.points), leafsize=depth)
+    kd_tree = sp.spatial.KDTree(np.asarray(points.points))
     meshes = []
     normals = [np.asarray(points.normals)]
 
     for _ in tqdm.tqdm(range(max_iter)):
 
-        mesh, _ = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
-            points, depth=10, scale=1.01
-        )
-        # mesh = poisson_reconstruction(points)
+        if solver == 'python':
+            vertices, triangles, _ = poisson_reconstruction(
+                np.asarray(points.points), np.asarray(points.normals),
+                depth=depth, point_weight=point_weight, scale=1.01
+            )
+            mesh = o3d.geometry.TriangleMesh(
+                o3d.utility.Vector3dVector(vertices),
+                o3d.utility.Vector3iVector(triangles)
+            )
+        else:
+            mesh, _ = o3d.geometry.TriangleMesh \
+                .create_from_point_cloud_poisson(
+                    points, depth=depth, scale=1.01, point_weight=point_weight
+                )
         meshes.append(mesh)
 
         if anealing:

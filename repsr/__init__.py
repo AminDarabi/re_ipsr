@@ -6,12 +6,14 @@
 
 from .utility import initial_normal, calculate_triangle_centroids
 from .ipsr import iterative_poisson_reconstruction
+from .psr import poisson_reconstruction
 
 __version__ = "0.1.0"
 __author__ = "Amin Darabi"
 
 __all__ = [
     "iterative_poisson_reconstruction",
+    "poisson_reconstruction",
     "initial_normal",
     "calculate_triangle_centroids",
 ]

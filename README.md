@@ -22,32 +22,36 @@ throughout.
 - Support for saving intermediate results
 
 ## Requirements
-- Python 3.10 or later (3.11 tested)
+- Python 3.10 or later (3.13 tested)
 - NumPy
 - SciPy
-- Open3D
+- Open3D 0.20 or later (exposes the Poisson screening weight)
 - Vedo
 - tqdm
 
-Assuming you have Python installed, you can install the required packages using pip:
+## Installation
+From the root of the repository, install the package and its dependencies with pip:
 ```bash
-pip install numpy scipy open3d vedo tqdm
+pip install .
 ```
-or,
-```bash
-pip install -r requirements.txt
-```
+(use `pip install -e .` for an editable install while developing).
 
 ## Usage
-Run the program using:
+Installing the package provides the `repsr` command:
 ```bash
-python main.py input_pointcloud.ply [options]
+repsr input_pointcloud.ply [options]
+```
+or, equivalently,
+```bash
+python -m repsr input_pointcloud.ply [options]
 ```
 
 ### Options
 - `--init`: Method to estimate initial normals (`random`, `estimate`, `heuristic`)
 - `-i, --max-iter`: Maximum number of iterations (default: 30)
-- `--depth`: Depth for trees (default: 10)
+- `--depth`: Depth of the Poisson octree (default: 10)
+- `-pw, --point-weight`: Screening weight of the Poisson reconstruction (default: 10, as the original iPSR)
+- `--solver`: Poisson solver, `open3d` (official C++ PoissonRecon, default) or `python` (pure NumPy / SciPy re-implementation in `repsr/psr.py`; use `--depth 8` or less)
 - `-k, --k-neighbors`: Number of neighbors to consider (default: 10)
 - `--threshold`: Convergence threshold (default: 1e-4)
 - `-p, --plot`: Number of iterations to plot (default: 0)
@@ -59,7 +63,17 @@ python main.py input_pointcloud.ply [options]
 ### Example
 To reconstruct a point cloud with visualization and intermediate results:
 ```bash
-python main.py bunny.ply -i 20 -k 15 --init heuristic -p 5 -o results/ -s -w
+repsr bunny.ply -i 20 -k 15 --init heuristic -p 5 -o results/ -s -w
+```
+
+### Pure Python Poisson reconstruction
+`repsr/psr.py` re-implements screened Poisson surface reconstruction with
+NumPy and SciPy only (hierarchical trilinear basis, cascadic conjugate gradient
+solve, SciPy KD-tree for the sample density, marching tetrahedra), to be
+checked against the official implementation:
+```python
+from repsr import poisson_reconstruction
+vertices, triangles, densities = poisson_reconstruction(points, normals, depth=8, point_weight=10)
 ```
 
 ## Output
