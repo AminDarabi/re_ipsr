@@ -51,7 +51,7 @@ python -m repsr input_pointcloud.ply [options]
 - `-i, --max-iter`: Maximum number of iterations (default: 30)
 - `--depth`: Depth of the Poisson octree (default: 10)
 - `-pw, --point-weight`: Screening weight of the Poisson reconstruction (default: 10, as the original iPSR)
-- `--solver`: Poisson solver, `open3d` (official C++ PoissonRecon, default) or `python` (pure NumPy / SciPy re-implementation in `repsr/psr.py`; use `--depth 8` or less)
+- `--solver`: Poisson solver, `open3d` (official C++ PoissonRecon, default) or `python` (pure NumPy / SciPy re-implementation in `repsr/psr.py`; as the official one, it stops refining where the samples are sparse, but its time and memory grow ~4x per depth actually reached: depth 9 is practical)
 - `-k, --k-neighbors`: Number of neighbors to consider (default: 10)
 - `--threshold`: Convergence threshold (default: 1e-4)
 - `-p, --plot`: Number of iterations to plot (default: 0)
@@ -68,9 +68,11 @@ repsr bunny.ply -i 20 -k 15 --init heuristic -p 5 -o results/ -s -w
 
 ### Pure Python Poisson reconstruction
 `repsr/psr.py` re-implements screened Poisson surface reconstruction with
-NumPy and SciPy only (hierarchical trilinear basis, cascadic conjugate gradient
-solve, SciPy KD-tree for the sample density, marching tetrahedra), to be
-checked against the official implementation:
+NumPy and SciPy only, following the discretisation of the official code
+(adaptive octree with density-dependent depth, quadratic B-spline normal field,
+hierarchical trilinear basis with depth-weighted screening, cascadic conjugate
+gradient solve, SciPy KD-tree for the sample density, marching tetrahedra), to
+be checked against the official implementation:
 ```python
 from repsr import poisson_reconstruction
 vertices, triangles, densities = poisson_reconstruction(points, normals, depth=8, point_weight=10)
