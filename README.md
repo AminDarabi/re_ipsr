@@ -51,9 +51,11 @@ python -m repsr input_pointcloud.ply [options]
 - `-i, --max-iter`: Maximum number of iterations (default: 30)
 - `--depth`: Depth of the Poisson octree (default: 10)
 - `-pw, --point-weight`: Screening weight of the Poisson reconstruction (default: 10, as the original iPSR)
-- `--solver`: Poisson solver, `open3d` (official C++ PoissonRecon, default) or `python` (pure NumPy / SciPy re-implementation in `repsr/psr.py`; as the official one, it stops refining where the samples are sparse, but its time and memory grow ~4x per depth actually reached: depth 9 is practical)
+- `--solver`: Poisson solver, `open3d` (official C++ PoissonRecon, default), `python` (pure NumPy / SciPy re-implementation in `repsr/psr.py`; as the official one, it stops refining where the samples are sparse, but its time and memory grow ~4x per depth actually reached: depth 9 is practical), or `fused` (the iPSR loop fused into the NumPy solver, coarse to fine; see below)
+- `--start-depth`: `fused` only, depth of the first stage (default: two depths above the finest one)
+- `--coarse-iters`: `fused` only, maximum number of iterations of the stages before the finest one (default: 5)
 - `-k, --k-neighbors`: Number of neighbors to consider (default: 10)
-- `--threshold`: Convergence threshold (default: 1e-4)
+- `--threshold`: Convergence threshold (default: 1e-4 on the mean normal change; `fused`: 0.175 on the mean of the 0.1% largest changes, as iPSR)
 - `-p, --plot`: Number of iterations to plot (default: 0)
 - `-o, --output`: Output directory (default: "out/")
 - `-s, --save-iters`: Save intermediate iteration meshes and normals
@@ -76,6 +78,30 @@ be checked against the official implementation:
 ```python
 from repsr import poisson_reconstruction
 vertices, triangles, densities = poisson_reconstruction(points, normals, depth=8, point_weight=10)
+```
+
+### Fused iPSR (`--solver fused`, new in 0.2.0)
+The original iPSR runs screened PSR as a black box: every iteration rebuilds
+the octree, the density estimate and the linear systems, although only the
+normals change. `repsr/fused.py` runs the iPSR loop inside the NumPy solver:
+- everything that depends only on the point positions (samples, density,
+  octree, stiffness and screening matrices, interpolation between depths,
+  KD-trees) is built once; an iteration rebuilds only the normal field (the
+  right-hand side), re-solves with conjugate gradients started from the
+  previous solution, extracts the surface and updates the normals;
+- the iterations go coarse to fine: they start a few depths above the
+  finest one on the samples gathered per cell of that depth, and every
+  finer stage inherits the normals of the coarser one;
+- as in iPSR, the indicator function vanishes on the domain boundary
+  (Dirichlet), which fixes the global sign of the normals (with the Neumann
+  boundary of Open3D the result may come out inside out);
+- the normal update and stopping rule are those of iPSR (k nearest samples
+  of every face, area-weighted; average of the 0.1% largest normal changes
+  below 0.175).
+
+```python
+import open3d as o3d, repsr
+meshes, normals = repsr.fused_iterative_reconstruction(o3d.io.read_point_cloud("bunny.ply"))
 ```
 
 ## Output

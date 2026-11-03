@@ -111,12 +111,25 @@ def main(args):
 
     points = o3d.io.read_point_cloud(args.input)
 
-    meshes, normals = repsr.iterative_poisson_reconstruction(
-        points, max_iter=args.max_iter, depth=args.depth,
-        k_neighbors=args.k_neighbors, threshold=args.threshold,
-        init_method=args.init, weighted=args.weighted, anealing=args.anealing,
-        point_weight=args.point_weight, solver=args.solver
-    )
+    if args.solver == 'fused':
+        meshes, normals = repsr.fused_iterative_reconstruction(
+            points, max_iter=args.max_iter, depth=args.depth,
+            k_neighbors=args.k_neighbors, init_method=args.init,
+            weighted=args.weighted, anealing=args.anealing,
+            point_weight=args.point_weight, start_depth=args.start_depth,
+            coarse_iters=args.coarse_iters,
+            **({} if args.threshold is None else
+               {'threshold': args.threshold})
+        )
+    else:
+        meshes, normals = repsr.iterative_poisson_reconstruction(
+            points, max_iter=args.max_iter, depth=args.depth,
+            k_neighbors=args.k_neighbors,
+            threshold=1e-4 if args.threshold is None else args.threshold,
+            init_method=args.init, weighted=args.weighted,
+            anealing=args.anealing, point_weight=args.point_weight,
+            solver=args.solver
+        )
 
     os.makedirs(args.output, exist_ok=True)
     o3d.io.write_triangle_mesh(
@@ -207,8 +220,19 @@ def cli(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         '--solver',
-        type=str, default="open3d", choices=["open3d", "python"],
-        help="Poisson solver: official C++ (open3d) or pure NumPy (python)"
+        type=str, default="open3d", choices=["open3d", "python", "fused"],
+        help="Poisson solver: official C++ (open3d), pure NumPy (python), "
+        "or the iPSR loop fused into the NumPy solver, coarse to fine (fused)"
+    )
+    parser.add_argument(
+        '--start-depth',
+        type=int, default=None,
+        help="fused: depth of the first stage (default: finest depth - 2)"
+    )
+    parser.add_argument(
+        '--coarse-iters',
+        type=int, default=5,
+        help="fused: maximum iterations of the stages before the finest one"
     )
     parser.add_argument(
         '--k-neighbors', '-k',
@@ -216,8 +240,9 @@ def cli(argv: list[str] | None = None) -> None:
         help="Number of neighbors to consider"
     )
     parser.add_argument(
-        '--threshold', type=float, default=1e-4,
-        help="Threshold for convergence"
+        '--threshold', type=float, default=None,
+        help="Threshold for convergence (default: 1e-4 on the mean normal "
+        "change; fused: 0.175 on the mean of the 0.1%% largest changes)"
     )
     parser.add_argument(
         '--plot', '-p',
